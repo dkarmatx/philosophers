@@ -6,7 +6,7 @@
 /*   By: hgranule <hganule@42.fr>                   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/12/23 21:36:33 by hgranule          #+#    #+#             */
-/*   Updated: 2021/01/02 21:59:18 by hgranule         ###   ########.fr       */
+/*   Updated: 2021/01/03 14:52:11 by hgranule         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,14 +40,27 @@ static void					*logger_worker(void *nullable)
 	return (NULL);
 }
 
-void						logger_stop()
+void						logger_stop(int philo_idx, const char *msg)
 {
+	t_log_item	item;
+
+	pthread_mutex_lock(&g_log_q_pusher);
+	item.time = timer_now_ms();
+	item.philo_id = philo_idx + 1;
+	item.message = msg;
+	if (g_log_run)
+	{
+		while (log_q_isfull((t_log_q*)&g_queue))
+			;
+		log_q_push((t_log_q*)&g_queue, item);
+	}
 	g_log_run = false;
+	pthread_mutex_unlock(&g_log_q_pusher);
 }
 
 void						logger_destroy()
 {
-	logger_stop();
+	g_log_run = false;
 	pthread_mutex_destroy(&g_log_q_pusher);
 	pthread_mutex_destroy(&g_atomic);
 	pthread_join(g_logger_thread, NULL);

@@ -15,7 +15,8 @@ void				put_n_make_zamer() {printf("%llu us\n", timer_now_us() - g_timer_us); g_
 
 # define PHILO_WORKERS_START_DELAY_MS 1000
 # define PHILO_MAX_NUM 1000
-# define PHILO_CHECK_DEATH_DELAY 1000
+# define PHILO_CHECK_DEATH_DELAY_US 100
+# define PHILO_TRY_FORKS_DELAY_US 17
 
 typedef int			t_philo_id;
 
@@ -26,6 +27,30 @@ struct				s_conf
 	t_time_ms		ttd;
 	t_time_ms		tte;
 	t_time_ms		tts;
+};
+
+struct				s_atomicfork
+{
+	pthread_mutex_t	guard;
+	bool			is_free;
+};
+
+struct				s_atomictime
+{
+	pthread_mutex_t	guard;
+	t_time_ms		val;
+};
+
+struct				s_atomicbool
+{
+	pthread_mutex_t	guard;
+	bool			val;
+};
+
+struct				s_atomicps
+{
+	struct s_atomictime deadline;
+	struct s_atomicbool	is_exited;
 };
 
 enum				e_conf_args
@@ -54,65 +79,148 @@ bool				parse_args(int ac, const char *av[], struct s_conf *conf)
 struct s_conf		g_conf;
 t_time_ms			g_start_time;
 
-pthread_mutex_t		g_forks[PHILO_MAX_NUM];
-volatile t_time_ms	g_deadlines[PHILO_MAX_NUM] = {0};
-volatile bool		g_exited[PHILO_MAX_NUM] = {0};
+struct s_atomicfork	g_forks[PHILO_MAX_NUM];
+struct s_atomicps	g_philo_status[PHILO_MAX_NUM];
 
-void				forks_init(pthread_mutex_t *forks, int philo_num)
+void				forks_init(struct s_atomicfork *forks, int philo_num)
 {
 	int				i;
 
 	i = -1;
 	while (++i < philo_num)
-		pthread_mutex_init(forks + i, NULL);
+	{
+		pthread_mutex_init(&forks[i].guard, NULL);
+		forks[i].is_free = true;
+	}
 }
 
-void				forks_destroy(pthread_mutex_t *forks, int philo_num)
+void				forks_destroy(struct s_atomicfork *forks, int philo_num)
 {
 	int				i;
 
 	i = -1;
 	while (++i < philo_num)
-		pthread_mutex_destroy(forks + i);
+		pthread_mutex_destroy(&forks[i].guard);
 }
 
-void				philo_take_forks(int pid)
+void				philo_take_forks(int pid,
+									struct s_atomicfork *first,
+									struct s_atomicfork *second)
+{
+	// bool	cont;
+
+	// bool cont = true;
+	// while (true)
+	// {
+	// 	pthread_mutex_lock(&first->guard);
+	// 	if (first->is_free)
+	// 	{
+	// 		pthread_mutex_lock(&second->guard);
+	// 		if (second->is_free)
+	// 		{
+	// 			logger_msg(pid, "has taken a fork");
+	// 			logger_msg(pid, "has taken a fork");
+	// 			first->is_free = false;
+	// 			second->is_free = false;
+	// 			cont = false;
+	// 		}
+	// 		pthread_mutex_unlock(&second->guard);
+	// 	}
+	// 	pthread_mutex_unlock(&first->guard);
+	// 	if (cont)
+	// 		usleep(PHILO_TRY_FORKS_DELAY_US);
+	// 	else
+	// 		break ;
+	// }
+
+	bool cont1 = true;
+	bool cont2 = true;
+	while (true)
+	{
+		if (cont1)
+		{
+			pthread_mutex_lock(&first->guard);
+			if (first->is_free)
+			{
+				cont1 = false;
+				logger_msg(pid, "has taken a fork");
+				first->is_free = false;
+			}
+			pthread_mutex_unlock(&first->guard);
+		}
+		if (cont2)
+		{
+			pthread_mutex_lock(&second->guard);
+			if (second->is_free)
+			{
+				cont2 = false;
+				logger_msg(pid, "has taken a fork");
+				second->is_free = false;
+			}
+			pthread_mutex_unlock(&second->guard);
+		}
+		if (cont1 || cont2)
+			usleep(PHILO_TRY_FORKS_DELAY_US);
+		else
+			break ;
+	}
+}
+
+void				philo_put_forks(int pid,
+									struct s_atomicfork *first,
+									struct s_atomicfork *second)
+{
+	(void)pid;
+	pthread_mutex_lock(&first->guard);
+	first->is_free = true;
+	pthread_mutex_unlock(&first->guard);
+	pthread_mutex_lock(&second->guard);
+	second->is_free = true;
+	pthread_mutex_unlock(&second->guard);
+}
+
+void				philo_choose_forks(int pid,
+										struct s_atomicfork **first,
+										struct s_atomicfork **second)
 {
 	if (pid == g_conf.philo_num - 1)
 	{
-		pthread_mutex_lock(&g_forks[0]);
-		logger_msg(pid, "has taken a lfork");
-		pthread_mutex_lock(&g_forks[pid]);
-		logger_msg(pid, "has taken a rfork");
+		*first = g_forks + pid;
+		*second = g_forks + (pid + 1) % g_conf.philo_num;
 	}
 	else
 	{
-		pthread_mutex_lock(&g_forks[pid]);
-		logger_msg(pid, "has taken a rfork");
-		pthread_mutex_lock(&g_forks[pid + 1]);
-		logger_msg(pid, "has taken a lfork");
+		*first = g_forks + (pid + 1) % g_conf.philo_num;
+		*second = g_forks + pid;
 	}
-}
-
-void				philo_put_forks(int pid)
-{
-	pthread_mutex_unlock(&g_forks[pid]);
-	pthread_mutex_unlock(&g_forks[(pid + 1) % g_conf.philo_num]);
 }
 
 void				*philo_worker(void *data)
 {
-	const int		pid = (int)data;
+	const int					pid = (int)data;
+	struct s_atomicps *const	philo = &g_philo_status[pid];
+	struct s_atomicfork			*first;
+	struct s_atomicfork			*second;
 
+	philo_choose_forks(pid, &first, &second);
 	timer_wait_until_ms(g_start_time, -1);
-	while (!g_exited[pid])
+	while (true)
 	{
+		pthread_mutex_lock(&philo->is_exited.guard);
+		if (philo->is_exited.val == true)
+			return (NULL);
+		pthread_mutex_unlock(&philo->is_exited.guard);
+	
 		logger_msg(pid, "is thinking");
-		philo_take_forks(pid);
-		g_deadlines[pid] = timer_now_ms() + g_conf.ttd;
+		philo_take_forks(pid, first, second);
+
+		pthread_mutex_lock(&philo->deadline.guard);
+		philo->deadline.val = timer_now_ms() + g_conf.ttd;
+		pthread_mutex_unlock(&philo->deadline.guard);
+
 		logger_msg(pid, "is eating");
 		timer_wait_until_ms(timer_now_ms() + g_conf.tte, -1);
-		philo_put_forks(pid);
+		philo_put_forks(pid, first, second);
 		logger_msg(pid, "is sleeping");
 		timer_wait_until_ms(timer_now_ms() + g_conf.tts, -1);
 	}
@@ -126,10 +234,12 @@ void				philos_launch(void)
 
 	i = -1;
 	while (++i < g_conf.philo_num)
-		g_deadlines[i] = g_start_time + g_conf.ttd;
-	i = -1;
-	while (++i < g_conf.philo_num)
-		g_exited[i] = false;
+	{
+		pthread_mutex_init(&g_philo_status[i].deadline.guard, NULL);
+		pthread_mutex_init(&g_philo_status[i].is_exited.guard, NULL);
+		g_philo_status[i].is_exited.val = false;
+		g_philo_status[i].deadline.val = g_start_time + g_conf.ttd;
+	}
 	i = -1;
 	while (++i < g_conf.philo_num)
 	{
@@ -149,20 +259,28 @@ void				philos_checker(void)
 		i = -1;
 		while (++i < g_conf.philo_num)
 		{
-			if (g_deadlines[i] <= timer_now_ms())
+			pthread_mutex_lock(&g_philo_status[i].deadline.guard);
+			if (g_philo_status[i].deadline.val <= timer_now_ms())
 			{
-				logger_msg(i, "died");
-				logger_stop();
+				logger_stop(i, "died");
 				run = false;
+				pthread_mutex_unlock(&g_philo_status[i].deadline.guard);
 				break ;
 			}
-			run |= !g_exited[i];
+			pthread_mutex_unlock(&g_philo_status[i].deadline.guard);
+			pthread_mutex_lock(&g_philo_status[i].is_exited.guard);
+			run |= !g_philo_status[i].is_exited.val;
+			pthread_mutex_unlock(&g_philo_status[i].is_exited.guard);
 		}
-		usleep(50);
+		usleep(PHILO_CHECK_DEATH_DELAY_US);
 	}
 	i = -1;
 	while (++i)
-		g_exited[i] = true;
+	{
+		pthread_mutex_lock(&g_philo_status[i].is_exited.guard);
+		g_philo_status[i].is_exited.val = true;
+		pthread_mutex_unlock(&g_philo_status[i].is_exited.guard);
+	}
 }
 
 int					main(int ac, const char *av[])

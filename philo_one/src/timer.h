@@ -6,7 +6,7 @@
 /*   By: hgranule <hganule@42.fr>                   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/12/23 18:12:18 by hgranule          #+#    #+#             */
-/*   Updated: 2021/01/02 14:29:47 by hgranule         ###   ########.fr       */
+/*   Updated: 2021/01/03 18:26:58 by hgranule         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,7 +17,7 @@
 # include <stddef.h>
 # include <stdbool.h>
 
-# define TIMER_WAIT_DELTA_US 100
+# define TIMER_WAIT_DELTA_US 101
 
 typedef uint64_t			t_time_ms;
 typedef uint64_t			t_time_us;
