@@ -5,13 +5,15 @@ from collections import OrderedDict
 
 LOG_PATTERN = r'\[\s*(\d+)\sms\s\]\s*(\d+)\s(.*)'
 STATE_DIED      = 'X'
-STATE_FORK1     = 'f'
-STATE_FORK2     = 'F'
+STATE_FORK1     = '-'# 'f'
+STATE_FORK2     = '-'# 'F'
 STATE_EAT       = 'E'
-STATE_SLEEP     = 'S'
+STATE_SLEEP     = '|'
 STATE_THINK     = '-'
-STATE_FED_UP    = ' '
+STATE_FED_UP    = '.'
 STATE_UNKOWN    = '?'
+
+STATE_TIME_DEL  = ' '
 
 def get_state_char(philo_msg, old_state=STATE_UNKOWN):
     if re.match(r'.*died.*', philo_msg):
@@ -37,7 +39,10 @@ def collect_info_from_log_line(line):
 
 def update_philo_frame(philosophers, old_state_idx, new_state_idx):
     for idx in range(len(philosophers)):
-        philosophers[idx][new_state_idx] = philosophers[idx].get(new_state_idx, philosophers[idx][old_state_idx])
+        old_state = philosophers[idx][old_state_idx]
+        if old_state == STATE_TIME_DEL:
+            old_state = philosophers[idx][old_state_idx - 1]
+        philosophers[idx][new_state_idx] = philosophers[idx].get(new_state_idx, old_state)
     return new_state_idx, new_state_idx + 1
 
 
@@ -50,12 +55,19 @@ def collect_philo_history(filename, philo_num):
 
     with open(filename, "r") as f:
         old_state_idx = 0
+        old_time = 0
         new_state_idx = 1
         for line in f:
             time_ms, philo_idx, philo_msg = collect_info_from_log_line(line)
 
-            if philosophers[philo_idx].get(new_state_idx):
+            if philosophers[philo_idx].get(new_state_idx) or time_ms != old_time:
                 old_state_idx, new_state_idx = update_philo_frame(philosophers, old_state_idx, new_state_idx)
+                if time_ms != old_time:
+                    for idx in range(len(philosophers)):
+                        philosophers[idx][new_state_idx] = STATE_TIME_DEL
+                    old_state_idx = new_state_idx
+                    new_state_idx += 1
+                    old_time = time_ms
             
             philosophers[philo_idx][new_state_idx] = get_state_char(philo_msg, philosophers[philo_idx][old_state_idx])
 
@@ -66,7 +78,7 @@ def collect_philo_history(filename, philo_num):
 def get_philo_state_string(philo_time_dict):
     result = ""
     for state in philo_time_dict.values():
-        result += " " + state
+        result += state
     return result
 
 def main(argv):

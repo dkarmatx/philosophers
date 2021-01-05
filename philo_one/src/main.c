@@ -107,8 +107,8 @@ void				philo_take_forks(int pid,
 									struct s_atomicfork *first,
 									struct s_atomicfork *second)
 {
-	// bool	cont;
 
+	// ALGO 1
 	// bool cont = true;
 	// while (true)
 	// {
@@ -133,33 +133,70 @@ void				philo_take_forks(int pid,
 	// 		break ;
 	// }
 
-	bool cont1 = true;
-	bool cont2 = true;
+	// ALGO 2
+	// bool cont1 = true;
+	// bool cont2 = true;
+	// while (true)
+	// {
+	// 	if (cont1)
+	// 	{
+	// 		pthread_mutex_lock(&first->guard);
+	// 		if (first->is_free)
+	// 		{
+	// 			cont1 = false;
+	// 			logger_msg(pid, "has taken a fork");
+	// 			first->is_free = false;
+	// 		}
+	// 		pthread_mutex_unlock(&first->guard);
+	// 	}
+	// 	if (cont2)
+	// 	{
+	// 		pthread_mutex_lock(&second->guard);
+	// 		if (second->is_free)
+	// 		{
+	// 			cont2 = false;
+	// 			logger_msg(pid, "has taken a fork");
+	// 			second->is_free = false;
+	// 		}
+	// 		pthread_mutex_unlock(&second->guard);
+	// 	}
+	// 	if (cont1 || cont2)
+	// 		usleep(PHILO_TRY_FORKS_DELAY_US);
+	// 	else
+	// 		break ;
+	// }
+
+	// ALGO 3
+	bool cont;
+
+	cont = true;
 	while (true)
 	{
-		if (cont1)
+		pthread_mutex_lock(&first->guard);
+		if (first->is_free)
 		{
-			pthread_mutex_lock(&first->guard);
-			if (first->is_free)
-			{
-				cont1 = false;
-				logger_msg(pid, "has taken a fork");
-				first->is_free = false;
-			}
-			pthread_mutex_unlock(&first->guard);
+			cont = false;
+			logger_msg(pid, "has taken a fork");
+			first->is_free = false;
 		}
-		if (cont2)
+		pthread_mutex_unlock(&first->guard);
+		if (cont)
+			usleep(PHILO_TRY_FORKS_DELAY_US);
+		else
+			break ;
+	}
+	cont = true;
+	while (true)
+	{
+		pthread_mutex_lock(&second->guard);
+		if (second->is_free)
 		{
-			pthread_mutex_lock(&second->guard);
-			if (second->is_free)
-			{
-				cont2 = false;
-				logger_msg(pid, "has taken a fork");
-				second->is_free = false;
-			}
-			pthread_mutex_unlock(&second->guard);
+			cont = false;
+			logger_msg(pid, "has taken a fork");
+			second->is_free = false;
 		}
-		if (cont1 || cont2)
+		pthread_mutex_unlock(&second->guard);
+		if (cont)
 			usleep(PHILO_TRY_FORKS_DELAY_US);
 		else
 			break ;
@@ -170,13 +207,13 @@ void				philo_put_forks(int pid,
 									struct s_atomicfork *first,
 									struct s_atomicfork *second)
 {
-	(void)pid;
 	pthread_mutex_lock(&first->guard);
-	first->is_free = true;
-	pthread_mutex_unlock(&first->guard);
 	pthread_mutex_lock(&second->guard);
+	first->is_free = true;
 	second->is_free = true;
+	logger_msg(pid, "is sleeping");
 	pthread_mutex_unlock(&second->guard);
+	pthread_mutex_unlock(&first->guard);
 }
 
 void				philo_choose_forks(int pid,
@@ -185,13 +222,13 @@ void				philo_choose_forks(int pid,
 {
 	if (pid == g_conf.philo_num - 1)
 	{
-		*first = g_forks + pid;
-		*second = g_forks + (pid + 1) % g_conf.philo_num;
+		*first = g_forks + (pid + 1) % g_conf.philo_num;
+		*second = g_forks + pid;
 	}
 	else
 	{
-		*first = g_forks + (pid + 1) % g_conf.philo_num;
-		*second = g_forks + pid;
+		*first = g_forks + pid;
+		*second = g_forks + (pid + 1) % g_conf.philo_num;
 	}
 }
 
@@ -201,27 +238,26 @@ void				*philo_worker(void *data)
 	struct s_atomicps *const	philo = &g_philo_status[pid];
 	struct s_atomicfork			*first;
 	struct s_atomicfork			*second;
+	// t_time_ms					deadline;
 
 	philo_choose_forks(pid, &first, &second);
 	timer_wait_until_ms(g_start_time, -1);
+	// usleep(50 * pid);
 	while (true)
 	{
 		pthread_mutex_lock(&philo->is_exited.guard);
 		if (philo->is_exited.val == true)
 			return (NULL);
 		pthread_mutex_unlock(&philo->is_exited.guard);
-	
 		logger_msg(pid, "is thinking");
 		philo_take_forks(pid, first, second);
-
 		pthread_mutex_lock(&philo->deadline.guard);
-		philo->deadline.val = timer_now_ms() + g_conf.ttd;
-		pthread_mutex_unlock(&philo->deadline.guard);
-
+		philo->deadline.val = timer_now_ms() + g_conf.ttd + 1;
+		// deadline = philo->deadline.val;
 		logger_msg(pid, "is eating");
+		pthread_mutex_unlock(&philo->deadline.guard);
 		timer_wait_until_ms(timer_now_ms() + g_conf.tte, -1);
 		philo_put_forks(pid, first, second);
-		logger_msg(pid, "is sleeping");
 		timer_wait_until_ms(timer_now_ms() + g_conf.tts, -1);
 	}
 	return (NULL);
@@ -238,7 +274,7 @@ void				philos_launch(void)
 		pthread_mutex_init(&g_philo_status[i].deadline.guard, NULL);
 		pthread_mutex_init(&g_philo_status[i].is_exited.guard, NULL);
 		g_philo_status[i].is_exited.val = false;
-		g_philo_status[i].deadline.val = g_start_time + g_conf.ttd;
+		g_philo_status[i].deadline.val = g_start_time + g_conf.ttd + 1;
 	}
 	i = -1;
 	while (++i < g_conf.philo_num)
