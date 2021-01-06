@@ -6,7 +6,7 @@
 /*   By: hgranule <hganule@42.fr>                   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/12/23 21:36:33 by hgranule          #+#    #+#             */
-/*   Updated: 2021/01/03 14:52:11 by hgranule         ###   ########.fr       */
+/*   Updated: 2021/01/06 23:51:00 by hgranule         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,7 @@ pthread_mutex_t				g_atomic;
 static void					*logger_worker(void *nullable)
 {
 	t_log_item		item;
-	
+
 	(void)nullable;
 	while (g_log_run || !log_q_isempty((t_log_q*)&g_queue))
 	{
@@ -58,7 +58,7 @@ void						logger_stop(int philo_idx, const char *msg)
 	pthread_mutex_unlock(&g_log_q_pusher);
 }
 
-void						logger_destroy()
+void						logger_destroy(void)
 {
 	g_log_run = false;
 	pthread_mutex_destroy(&g_log_q_pusher);
