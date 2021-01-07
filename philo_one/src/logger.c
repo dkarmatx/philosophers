@@ -6,12 +6,13 @@
 /*   By: hgranule <hganule@42.fr>                   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/12/23 21:36:33 by hgranule          #+#    #+#             */
-/*   Updated: 2021/01/06 23:51:00 by hgranule         ###   ########.fr       */
+/*   Updated: 2021/01/07 17:52:48 by hgranule         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "log_q.h"
 #include "logger.h"
+#include <unistd.h>
 
 static volatile t_log_q		g_queue;
 static volatile t_time_ms	g_log_start_ms;
@@ -36,6 +37,8 @@ static void					*logger_worker(void *nullable)
 						, item.message);
 			log_q_pop((t_log_q*)&g_queue);
 		}
+		else
+			usleep(LOGGER_WRITE_DELAY_US);
 	}
 	return (NULL);
 }
@@ -51,7 +54,7 @@ void						logger_stop(int philo_idx, const char *msg)
 	if (g_log_run)
 	{
 		while (log_q_isfull((t_log_q*)&g_queue))
-			;
+			usleep(LOGGER_CHECK_FULL_DELAY_US);
 		log_q_push((t_log_q*)&g_queue, item);
 	}
 	g_log_run = false;
@@ -91,7 +94,7 @@ void						logger_msg(int philo_idx, const char *msg)
 	if (g_log_run)
 	{
 		while (log_q_isfull((t_log_q*)&g_queue))
-			;
+			usleep(LOGGER_CHECK_FULL_DELAY_US);
 		log_q_push((t_log_q*)&g_queue, item);
 	}
 	pthread_mutex_unlock(&g_log_q_pusher);

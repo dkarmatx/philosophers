@@ -6,7 +6,7 @@
 /*   By: hgranule <hganule@42.fr>                   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/01/06 22:59:41 by hgranule          #+#    #+#             */
-/*   Updated: 2021/01/06 23:50:19 by hgranule         ###   ########.fr       */
+/*   Updated: 2021/01/07 23:20:13 by hgranule         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,9 +19,9 @@
 # include "logger.h"
 
 # define PHILO_WORKERS_START_DELAY_MS 1000
-# define PHILO_MAX_NUM 1000
+# define PHILO_ODD_START_DELAY_US 300
+# define PHILO_MAX_NUM 200
 # define PHILO_CHECK_DEATH_DELAY_US 100
-# define PHILO_TRY_FORKS_DELAY_US 17
 
 typedef int					t_philo_id;
 
@@ -94,21 +94,14 @@ void						philos_destroy(struct s_atomicps statuses[],
 
 void						*philo_worker(void *data);
 
-void						philo_take_forks_good(int pid,
-										struct s_atomicfork *first,
-										struct s_atomicfork *second);
-void						philo_take_forks_bad(int pid,
-										struct s_atomicfork *first,
-										struct s_atomicfork *second);
-void						philo_take_forks_ugly(int pid,
+void						philo_take_forks(t_philo_id pid,
 										struct s_atomicfork *first,
 										struct s_atomicfork *second);
 
-void						philo_choose_forks(int pid,
+void						philo_choose_forks(t_philo_id pid,
 										struct s_atomicfork **first,
 										struct s_atomicfork **second);
-void						philo_put_forks(int pid,
-										struct s_atomicfork *first,
+void						philo_put_forks(struct s_atomicfork *first,
 										struct s_atomicfork *second);
 
 #endif

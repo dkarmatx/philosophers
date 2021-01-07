@@ -6,7 +6,7 @@
 /*   By: hgranule <hganule@42.fr>                   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/01/06 23:28:10 by hgranule          #+#    #+#             */
-/*   Updated: 2021/01/06 23:33:51 by hgranule         ###   ########.fr       */
+/*   Updated: 2021/01/07 22:26:13 by hgranule         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,10 +18,7 @@ int					main(int ac, const char *av[])
 	pthread_t		philo_threads[PHILO_MAX_NUM];
 
 	if (!parse_args(ac, av, &g_conf))
-	{
-		write(STDERR_FILENO, "Error\n", 6);
 		return (EXIT_FAILURE);
-	}
 	forks_init(g_forks, g_conf.philo_num);
 	g_start_time = timer_now_ms() + PHILO_WORKERS_START_DELAY_MS;
 	logger_init(g_start_time);

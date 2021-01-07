@@ -2,6 +2,7 @@
 .vscode/
 *.o
 *.a
+*.d
 *.so
 *.dylib
 *.log

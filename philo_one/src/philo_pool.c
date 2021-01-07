@@ -1,12 +1,12 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   philos_pool.c                                      :+:      :+:    :+:   */
+/*   philo_pool.c                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: hgranule <hganule@42.fr>                   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/01/06 23:08:50 by hgranule          #+#    #+#             */
-/*   Updated: 2021/01/06 23:35:31 by hgranule         ###   ########.fr       */
+/*   Updated: 2021/01/07 23:12:37 by hgranule         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,6 +44,7 @@ void				philos_checker(struct s_atomicps statuses[],
 	while (run)
 	{
 		i = -1;
+		run = false;
 		while (++i < philo_num)
 		{
 			pthread_mutex_lock(&statuses[i].deadline.guard);
@@ -56,7 +57,7 @@ void				philos_checker(struct s_atomicps statuses[],
 			}
 			pthread_mutex_unlock(&statuses[i].deadline.guard);
 			pthread_mutex_lock(&statuses[i].is_exited.guard);
-			run |= !statuses[i].is_exited.val;
+			run = run || !statuses[i].is_exited.val;
 			pthread_mutex_unlock(&statuses[i].is_exited.guard);
 		}
 		usleep(PHILO_CHECK_DEATH_DELAY_US);
