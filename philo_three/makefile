@@ -7,18 +7,17 @@ INC_DIR = inc
 SRC_DIR	= src
 OBJ_DIR = build
 
-NAME	= philo_one
+NAME	= philo_three
 
 SRCS	=	arguments.c \
-			log_q.c \
 			logger_write.c \
 			logger.c \
 			main.c \
 			philo_forkpool.c \
 			philo_sync.c \
-			philo_worker.c \
-			philo_pool.c \
-			timer.c
+			timer.c \
+			utils.c \
+			sems.c
 
 INCS	= $(patsubst %, -I%, $(INC_DIR))
 DEPS	= $(patsubst %, $(OBJ_DIR)/%.d, $(SRCS))
