@@ -6,7 +6,7 @@
 /*   By: hgranule <hganule@42.fr>                   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/01/06 23:28:10 by hgranule          #+#    #+#             */
-/*   Updated: 2021/01/08 22:04:39 by hgranule         ###   ########.fr       */
+/*   Updated: 2021/01/10 17:58:55 by hgranule         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,8 @@
 #include <pthread.h>
 #include <string.h>
 #include <signal.h>
+
+#include <stdio.h>
 
 #include "logger.h"
 #include "philo.h"
@@ -132,7 +134,7 @@ enum e_philo_status	philo_call_me_maybe(pid_t pid)
 {
 	int		status;
 
-	if (0 == waitpid(pid, &status, WNOHANG | WUNTRACED))
+	if (0 == waitpid(pid, &status, WNOHANG))
 		return (PHILO_ALIVE);
 	if (WIFEXITED(status))
 		return (WEXITSTATUS(status) == EXIT_SUCCESS ? PHILO_FEDUP : PHILO_DEAD);
@@ -165,20 +167,22 @@ void				philo_wait(pid_t philo_pids[], int philo_num)
 	while (run)
 	{
 		id = -1;
+		run = false;
 		while (++id < philo_num)
 		{
 			if (!philo_exited[id])
 			{
 				philo_status = philo_call_me_maybe(philo_pids[id]);
-				if (philo_status == PHILO_ALIVE)
-					continue ;
-				else if (philo_status == PHILO_FEDUP)
+				if (philo_status == PHILO_FEDUP)
 					philo_exited[id] = true;
-				else
+				else if (philo_status != PHILO_ALIVE)
+				{
+					run = false;
 					break ;
+				}
 			}
-			// TODO THEY ARE NOT STOPPING AFTER THEY FED UP OR DIED
 			run = run || !philo_exited[id];
+			usleep(PHILO_CHECK_DEATH_DELAY_US);
 		}
 	}
 	
