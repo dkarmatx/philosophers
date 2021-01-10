@@ -6,7 +6,7 @@
 /*   By: hgranule <hganule@42.fr>                   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2020/12/23 21:36:33 by hgranule          #+#    #+#             */
-/*   Updated: 2021/01/08 17:51:12 by hgranule         ###   ########.fr       */
+/*   Updated: 2021/01/10 18:23:05 by hgranule         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,7 +35,6 @@ void						logger_init(t_time_ms logger_start_ms)
 
 void						logger_msg(int philo_idx, const char *msg)
 {
-
 	sem_wait(g_log_q_pusher);
 	logger_write(philo_idx + 1, timer_now_ms() - g_log_start_ms, msg);
 	sem_post(g_log_q_pusher);

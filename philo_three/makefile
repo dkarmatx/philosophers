@@ -15,6 +15,8 @@ SRCS	=	arguments.c \
 			main.c \
 			philo_forkpool.c \
 			philo_sync.c \
+			philo_pool.c \
+			philo_worker.c \
 			timer.c \
 			utils.c \
 			sems.c

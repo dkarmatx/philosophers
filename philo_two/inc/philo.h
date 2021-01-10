@@ -6,7 +6,7 @@
 /*   By: hgranule <hganule@42.fr>                   +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/01/06 22:59:41 by hgranule          #+#    #+#             */
-/*   Updated: 2021/01/08 16:16:31 by hgranule         ###   ########.fr       */
+/*   Updated: 2021/01/10 18:25:01 by hgranule         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,7 +30,6 @@
 # define PHILO_ODD_START_DELAY_US 300
 # define PHILO_MAX_NUM 200
 # define PHILO_CHECK_DEATH_DELAY_US 100
-
 
 typedef int					t_philo_id;
 
